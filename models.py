@@ -4,13 +4,16 @@ import theano.tensor as T
 from collections import OrderedDict
 
 
+floatX = theano.config.floatX
+
+
 def log_gaussian_symbolic(X, alpha, beta):
     alpha = alpha.dimshuffle('x', 0)
     X = X.dimshuffle(0, 'x')
-    sqrt2pi = np.sqrt(2. * np.pi).astype('float32')
-    return (alpha * X + beta * X**2 +
-            .5 * T.log(-2. * beta) +
-            .25 * alpha**2 / beta - np.log(sqrt2pi))
+    sqrt2pi = np.sqrt(2. * np.pi).astype(floatX)
+    return ((alpha * X) + (beta * X**2) +
+            (.5 * T.log(-2. * beta)) +
+            (.25 * alpha**2 / beta) - np.log(sqrt2pi))
 
 def gaussian_symbolic(X, alpha, beta):
     lg = log_gaussian_symbolic(X, alpha, beta)
@@ -46,33 +49,32 @@ class MixtureModel(object):
         raise NotImplementedError
 
     def _update_X(self, X):
-        self._update_X_theano(X.astype('float32'))
+        self._update_X_theano(X.astype(floatX))
 
-    def fit(self, X, n_steps=100):
+    def fit(self, X, n_steps=10):
         self._update_X(X)
-        print 'hi', self.em_objective(X)
         for ii in range(n_steps):
-            print 'hi', self.em_objective(X)
+            print self.em_objective(X)
             self._update_params()
 
     def posterior(self, X):
-        return self._posterior(X.astype('float32'))
+        return self._posterior(X.astype(floatX))
 
     def em_objective(self, X):
-        return self._em_objective(X.astype('float32'))
+        return self._em_objective(X.astype(floatX))
 
 
 class GaussianMixture(MixtureModel):
     def _setup(self):
         pi = self.rng.rand(self.n_mixtures)
         pi /= pi.sum()
-        self.pi = theano.shared(pi.astype('float32'), 'pi')
+        self.pi = theano.shared(pi.astype(floatX), 'pi')
         alpha = self.rng.randn(self.n_mixtures)
-        self.alpha = theano.shared(alpha.astype('float32'), 'alpha')
+        self.alpha = theano.shared(alpha.astype(floatX), 'alpha')
         beta = -1. * np.ones(self.n_mixtures)
-        self.beta = theano.shared(beta.astype('float32'), 'beta')
+        self.beta = theano.shared(beta.astype(floatX), 'beta')
 
-        self.X = theano.shared(np.ones(1).astype('float32'))
+        self.X = theano.shared(np.ones(1).astype(floatX))
         X = T.vector('X')
         updates = OrderedDict()
         updates[self.X] = X
@@ -118,6 +120,6 @@ class RayleighMixture(MixtureModel):
     def _setup(self):
         pi = self.rng.rand(self.n_mixtures)
         pi /= pi.sum()
-        self.pi = theano.shared(pi.astype('float32'))
+        self.pi = theano.shared(pi.astype(floatX))
         neg_log_beta = self.rng.randn(self.n_mixtures)
-        self.neg_log_beta = theano.shared(neg_log_beta.astype('float32'))
+        self.neg_log_beta = theano.shared(neg_log_beta.astype(floatX))
